@@ -190,6 +190,8 @@ static struct bt_conn_cb conn_callbacks = {
 	.disconnected = disconnected,
 };
 
+static char *target_dev_name = "Nordic_HIDS_mouse";
+
 static void scan_init(void)
 {
 	int err;
@@ -203,14 +205,14 @@ static void scan_init(void)
 	bt_scan_init(&scan_init);
 	bt_scan_cb_register(&scan_cb);
 
-	err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_UUID, BT_UUID_HIDS);
+	err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_NAME, target_dev_name);
 	if (err) {
 		printk("Scanning filters cannot be set (err %d)\n", err);
 
 		return;
 	}
 
-	err = bt_scan_filter_enable(BT_SCAN_UUID_FILTER, false);
+	err = bt_scan_filter_enable(BT_SCAN_NAME_FILTER, true);
 	if (err) {
 		printk("Filters cannot be turned on (err %d)\n", err);
 	}
