@@ -361,9 +361,22 @@ static bool le_param_req(struct bt_conn *conn, struct bt_le_conn_param *param)
 	return false;
 }
 
+#include "remoteproc_mgr.h"
+
 void main(void)
 {
 	int err;
+
+#ifdef CONFIG_SOC_NRF5340_CPU0
+	/* Configure & Power on and boot remote processor */
+	printk("\n<-- Configure & Power on remote processor -->\n");
+	err = remoteproc_mgr_boot();
+	if (err) {
+		/* Something went wrong. Handle it here. */
+		printk("\n<-- Something went wrong. Handle it here. -->\n");
+		while(1);
+	}
+#endif
 
 	static struct bt_conn_cb conn_callbacks = {
 	    .connected = connected,
