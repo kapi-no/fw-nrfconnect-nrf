@@ -18,6 +18,9 @@
 extern "C" {
 #endif
 
+#define BT_EVENT_READY 0x01
+#define BT_EVENT_CONNECTED 0x02
+#define BT_EVENT_DISCONNECTED 0x03
 
 /**@brief Parse received data from other core. This function
  *        should be used on Application and Network core always
@@ -31,6 +34,7 @@ extern "C" {
  */
 int bt_rx_parse(const u8_t *data, size_t len);
 
+int bt_evt_send(u8_t evt, const u8_t *evt_data, size_t length);
 
 #ifdef __cplusplus
 }

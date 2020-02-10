@@ -11,6 +11,7 @@
 
 #include <bluetooth/addr.h>
 #include <bluetooth/bluetooth.h>
+#include <bluetooth/conn.h>
 
 #include "bt_ser.h"
 #include "rpmsg.h"
@@ -25,8 +26,6 @@ LOG_MODULE_REGISTER(bt_ser);
 
 #define BT_CMD_BT_ENABLE 0x01
 #define BT_CMD_BT_LE_ADV_START 0x02
-
-#define BT_EVENT_READY 0x01
 
 #define BT_TYPE_CMD 0x01
 #define BT_TYPE_EVENT 0x02
@@ -75,7 +74,7 @@ static int response_code_encode(CborEncoder *encoder, int rsp)
 }
 
 #if defined(NRF5340_XXAA_NETWORK)
-static int evt_send(u8_t evt, const u8_t *evt_data, size_t length)
+int bt_evt_send(u8_t evt, const u8_t *evt_data, size_t length)
 {
 	int err;
 	CborEncoder encoder;
@@ -143,7 +142,7 @@ void bt_ready(int err)
 	memcpy(it, &err, sizeof(err));
 	it += sizeof(err);
 
-	evt_send(BT_EVENT_READY, buf, (it - buf));
+	bt_evt_send(BT_EVENT_READY, buf, (it - buf));
 }
 
 static int bt_data_collect(u8_t *buf, size_t buf_len, struct bt_data *ad_data, size_t ad_len)
@@ -301,6 +300,7 @@ struct bt_event_data_t {
 };
 
 static K_FIFO_DEFINE(bt_event_data_q);
+static struct bt_conn_cb *callback_list;
 
 static void bt_ready_evt(const u8_t *data, size_t length)
 {
@@ -320,6 +320,50 @@ static void bt_ready_evt(const u8_t *data, size_t length)
 	cb(err);
 }
 
+static void bt_connected_evt(const u8_t *data, size_t length)
+{
+	struct bt_conn *conn;
+	u8_t err;
+
+	if (length != 5) {
+		LOG_ERR("bt_connected_evt parsing error: length != 5");
+	}
+
+	memcpy(&conn, data, sizeof(conn));
+	data += sizeof(conn);
+
+	memcpy(&err, data, sizeof(err));
+	data += sizeof(err);
+
+	for (struct bt_conn_cb *cb = callback_list; cb; cb = cb->_next) {
+		if (cb->connected) {
+			cb->connected(conn, err);
+		}
+	}
+}
+
+static void bt_disconnected_evt(const u8_t *data, size_t length)
+{
+	struct bt_conn *conn;
+	u8_t reason;
+
+	if (length != 5) {
+		LOG_ERR("bt_disconnected_evt parsing error: length != 5");
+	}
+
+	memcpy(&conn, data, sizeof(conn));
+	data += sizeof(conn);
+
+	memcpy(&reason, data, sizeof(reason));
+	data += sizeof(reason);
+
+	for (struct bt_conn_cb *cb = callback_list; cb; cb = cb->_next) {
+		if (cb->disconnected) {
+			cb->disconnected(conn, reason);
+		}
+	}
+}
+
 void bt_event_thread(void)
 {
 	for (;;) {
@@ -329,6 +373,14 @@ void bt_event_thread(void)
 		switch (buf->evt) {
 		case BT_EVENT_READY:
 			bt_ready_evt(buf->data, buf->len);
+			break;
+
+		case BT_EVENT_CONNECTED:
+			bt_connected_evt(buf->data, buf->len);
+			break;
+
+		case BT_EVENT_DISCONNECTED:
+			bt_disconnected_evt(buf->data, buf->len);
 			break;
 
 		default:
@@ -714,6 +766,12 @@ int bt_le_adv_start(const struct bt_le_adv_param *param,
 	}
 
 	return cmd_send(buf, buf_len, bt_send_rsp);
+}
+
+void bt_conn_cb_register(struct bt_conn_cb *cb)
+{
+	cb->_next = callback_list;
+	callback_list = cb;
 }
 
 #endif
