@@ -35,6 +35,11 @@ User interface
 Button 1:
    Send read request for the battery level value.
 
+   When pairing/bonding, press this button to confirm the passkey value that is printed on the COM listener to pair/bond with the other device.
+
+Button 2:
+   When pairing/bonding, press this button to reject the passkey value that is printed on the COM listener to prevent pairing/bonding with the other device.
+
 
 Building and running
 ********************
@@ -58,6 +63,7 @@ Testing with another board
 1. |connect_terminal_specific|
 #. Reset the board.
 #. Program the other board with the :ref:`peripheral_hids_keyboard` or :ref:`peripheral_hids_mouse` sample and reset it.
+#. When connected, press Button 1 on both devices to confirm the passkey value used for bonding, or press Button 2 to reject it.
 #. Wait until the BAS Server is detected by the central.
    In the terminal window, check for information similar to the following::
 
