@@ -31,9 +31,6 @@
 /* UART payload buffer element size. */
 #define UART_BUF_SIZE 20
 
-#define KEY_PASSKEY_ACCEPT DK_BTN1_MSK
-#define KEY_PASSKEY_REJECT DK_BTN2_MSK
-
 #define NUS_WRITE_TIMEOUT 150
 
 static struct device *uart;

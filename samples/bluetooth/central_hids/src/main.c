@@ -45,10 +45,6 @@
  */
 #define KEY_CAPSLOCK_RSP_MASK DK_BTN3_MSK
 
-/* Key used to accept or reject passkey value */
-#define KEY_PAIRING_ACCEPT DK_BTN1_MSK
-#define KEY_PAIRING_REJECT DK_BTN2_MSK
-
 static struct bt_conn *default_conn;
 static struct bt_gatt_hids_c hids_c;
 static u8_t capslock_state;
