@@ -406,6 +406,7 @@ static int isodep_s_frame_handle(const u8_t *data, size_t len)
 
 	wtxm = data[index];
 	wtxm &= ISODEP_WTXM_MASK;
+	LOG_INF("WTXM: %d", wtxm);
 
 	/* Check if WTXM is in valid range. */
 	if ((wtxm < ISODEP_WTXM_MIN) || (wtxm > ISODEP_WTXM_MAX)) {

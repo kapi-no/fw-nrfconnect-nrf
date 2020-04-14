@@ -434,6 +434,8 @@ static void t4t_isodep_error(int err)
 
 	nfc_tag_detect(false);
 }
+#include <logging/log.h>
+LOG_MODULE_REGISTER(main, 3);
 
 static void t4t_isodep_data_send(u8_t *data, size_t data_len, u32_t ftd)
 {
@@ -441,6 +443,7 @@ static void t4t_isodep_data_send(u8_t *data, size_t data_len, u32_t ftd)
 
 	tx_buf.data = data;
 	tx_buf.len = data_len;
+	LOG_HEXDUMP_INF(data, data_len, "Xx");
 
 	err = st25r3911b_nfca_transfer_with_crc(&tx_buf, &rx_buf, ftd);
 	if (err) {

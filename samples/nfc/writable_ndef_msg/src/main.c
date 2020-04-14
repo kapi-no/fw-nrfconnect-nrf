@@ -19,6 +19,8 @@
 
 #include "ndef_file_m.h"
 #include <nfc/ndef/nfc_ndef_msg.h>
+#include <logging/log.h>
+LOG_MODULE_REGISTER(main, 3);
 
 #include <dk_buttons_and_leds.h>
 
@@ -27,6 +29,12 @@
 #define NFC_READ_LED		DK_LED4
 
 #define NDEF_RESTORE_BTN_MSK	DK_BTN1_MSK
+
+volatile bool     m_sched_delayed_resp = false;  // Flag indicating to send delayed resp
+volatile uint32_t m_delay_time = 0;              // Delay Time in us.
+
+static const uint8_t ack_resp[]  = {'A', 'C', 'K'};
+static const uint8_t nack_resp[] = {'N', 'A', 'C', 'K'};
 
 static u8_t ndef_msg_buf[CONFIG_NDEF_FILE_SIZE]; /**< Buffer for NDEF file. */
 
@@ -87,6 +95,13 @@ static void nfc_callback(void *context,
 		}
 		break;
 
+        case NFC_T4T_EVENT_DATA_IND:
+                // m_delay_time = uint32_big_decode(data);
+		printk("Data ind\n");
+		// LOG_HEXDUMP_INF(data, data_length, "Xx");
+                m_sched_delayed_resp = true;
+		break;
+
 	default:
 		break;
 	}
@@ -122,27 +137,13 @@ int main(void)
 		printk("Cannot initialize board!\n");
 		goto fail;
 	}
-	/* Initialize NVS. */
-	if (ndef_file_setup() < 0) {
-		printk("Cannot setup NDEF file!\n");
-		goto fail;
-	}
-	/* Load NDEF message from the flash file. */
-	if (ndef_file_load(ndef_msg_buf, sizeof(ndef_msg_buf)) < 0) {
-		printk("Cannot load NDEF file!\n");
-		goto fail;
-	}
+
 
 	/* Restore default NDEF message if button is pressed. */
 	u32_t button_state;
 
 	dk_read_buttons(&button_state, NULL);
 	if (button_state & NDEF_RESTORE_BTN_MSK) {
-		if (ndef_restore_default(ndef_msg_buf,
-					 sizeof(ndef_msg_buf)) < 0) {
-			printk("Cannot flash NDEF message!\n");
-			goto fail;
-		}
 		printk("Default NDEF message restored!\n");
 	}
 	/* Set up NFC */
@@ -152,12 +153,7 @@ int main(void)
 		printk("Cannot setup t4t library!\n");
 		goto fail;
 	}
-	/* Run Read-Write mode for Type 4 Tag platform */
-	if (nfc_t4t_ndef_rwpayload_set(ndef_msg_buf,
-				       sizeof(ndef_msg_buf)) < 0) {
-		printk("Cannot set payload!\n");
-		goto fail;
-	}
+
 	/* Start sensing NFC field */
 	if (nfc_t4t_emulation_start() < 0) {
 		printk("Cannot start emulation!\n");
@@ -166,18 +162,12 @@ int main(void)
 	printk("Starting NFC Writable NDEF Message example\n");
 
 	while (true) {
-		if (atomic_cas(&op_flags, FLASH_BUF_PREP_FINISHED,
-				FLASH_WRITE_STARTED)) {
-			if (ndef_file_update(flash_buf, flash_buf_len) < 0) {
-				printk("Cannot flash NDEF message!\n");
-			} else {
-				printk("NDEF message successfully flashed.\n");
-			}
-
-			atomic_set(&op_flags, FLASH_WRITE_FINISHED);
-		}
-
-		__WFE();
+		if (m_sched_delayed_resp)
+		{
+			k_usleep(32*5000);
+			nfc_t4t_response_pdu_send(ack_resp, sizeof(ack_resp));
+			m_sched_delayed_resp = false;
+        	}
 	}
 
 fail:
