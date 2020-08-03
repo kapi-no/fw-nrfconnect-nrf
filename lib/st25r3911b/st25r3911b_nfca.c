@@ -17,7 +17,7 @@
 #include "st25r3911b_spi.h"
 #include "st25r3911b_interrupt.h"
 
-LOG_MODULE_DECLARE(st25r3911b);
+LOG_MODULE_DECLARE(st25r3911b, CONFIG_ST25R3911B_LIB_LOG_LEVEL);
 
 #define NFCA_MIN_LISTEN_FDT 1172
 
@@ -603,6 +603,12 @@ static int rx_fifo_water(void)
 {
 	uint8_t *buf;
 	uint32_t bytes_to_receive = nfca.water_lvl.rx;
+
+	printk("bytes to receive: %d\n", bytes_to_receive);
+	LOG_HEXDUMP_INF(nfca.transfer.rx_buf->data,
+			nfca.transfer.received_byte,
+			"\tLE SC Confirm Value:");
+
 
 	buf = nfca.transfer.rx_buf->data + nfca.transfer.received_byte;
 

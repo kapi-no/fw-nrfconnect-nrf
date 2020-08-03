@@ -55,6 +55,19 @@ static void flash_buffer_prepare(size_t data_length)
 
 }
 
+static char test_data[] = {
+	'L', 'o', 'r', 'e', 'm', ' ', 'i', 'p', 's', 'u', 'm', ' ', 'd', 'o', 'l', 'o', 'r', ' ', 's', 'i', 't', ' ', 'a', 'm', 'e', 't', ',', ' ', 'c', 'o', 'n', 's', 'e', 'c', 't', 'e', 't', 'u', 'r', ' ', 
+	'a', 'd', 'i', 'p', 'i', 's', 'c', 'i', 'n', 'g', ' ', 'e', 'l', 'i', 't', '.', ' ', 'P', 'r', 'o', 'i', 'n', ' ', 'n', 'i', 'b', 'h', ' ', 'a', 'u', 'g', 'u', 'e', ',', ' ', 's', 'u', 's', 'c', 'i', 
+	'p', 'i', 't', ' ', 'a', ',', ' ', 's', 'c', 'e', 'l', 'e', 'r', 'i', 's', 'q', 'u', 'e', ' ', 's', 'e', 'd', ',', ' ', 'l', 'a', 'c', 'i', 'n', 'i', 'a', ' ', 'i', 'n', ',', ' ', 'm', 'i', '.', ' ', 
+	'C', 'r', 'a', 's', ' ', 'v', 'e', 'l', ' ', 'l', 'o', 'r', 'e', 'm', '.', ' ', 'E', 't', 'i', 'a', 'm', ' ', 'p', 'e', 'l', 'l', 'e', 'n', 't', 'e', 's', 'q', 'u', 'e', ' ', 'a', 'l', 'i', 'q', 'u', 
+	'e', 't', ' ', 't', 'e', 'l', 'l', 'u', 's', '.', 'L', 'o', 'r', 'e', 'm', ' ', 'i', 'p', 's', 'u', 'm', ' ', 'd', 'o', 'l', 'o', 'r', ' ', 's', 'i', 't', ' ', 'a', 'm', 'e', 't', ',', ' ', 'c', 'o', 
+	'n', 's', 'e', 'c', 't', 'e', 't', 'u', 'r', ' ', 'a', 'd', 'i', 'p', 'i', 's', 'c', 'i', 'n', 'g', ' ', 'e', 'l', 'i', 't', '.', ' ', 'P', 'r', 'o', 'i', 'n', ' ', 'n', 'i', 'b', 'h', ' ', 'a', 'u', 
+	'g', 'u', 'e', ',', ' ', 's', 'u', 's', 'c', 'i', 'p', 'i', 't', ' ', 'a', ',', ' ', 's', 'c', 'e', 'l', 'e', 'r', 'i', 's', 'q', 'u', 'e', ' ', 's', 'e', 'd', ',', ' ', 'l', 'a', 'c', 'i', 'n', 'i', 
+	'a', ' ', 'i', 'n', ',', ' ', 'm', 'i', '.', ' ', 'C', 'r', 'a', 's', ' ', 'v', 'e', 'l', ' ', 'l', 'o', 'r', 'e', 'm', '.', ' ', 'E', 't', 'i', 'a', 'm', ' ', 'p', 'e', 'l', 'l', 'e', 'n', 't', 'e', 
+	's', 'q', 'u', 'e', ' ', 'a', 'l', 'i', 'q', 'u', 'e', 't', ' ', 't', 'e', 'l', 'l', 'u', 's', '.', 
+};
+static bool tx_to_be_sent = false;
+
 /**
  * @brief Callback function for handling NFC events.
  */
@@ -64,6 +77,8 @@ static void nfc_callback(void *context,
 			 size_t data_length,
 			 uint32_t flags)
 {
+	int err;
+
 	ARG_UNUSED(context);
 	ARG_UNUSED(data);
 	ARG_UNUSED(flags);
@@ -86,6 +101,11 @@ static void nfc_callback(void *context,
 			dk_set_led_on(NFC_WRITE_LED);
 			flash_buffer_prepare(data_length);
 		}
+		break;
+
+        case NFC_T4T_EVENT_DATA_IND:
+		printk("Data ind\n");
+		tx_to_be_sent = true;
 		break;
 
 	default:
@@ -123,29 +143,7 @@ int main(void)
 		printk("Cannot initialize board!\n");
 		goto fail;
 	}
-	/* Initialize NVS. */
-	if (ndef_file_setup() < 0) {
-		printk("Cannot setup NDEF file!\n");
-		goto fail;
-	}
-	/* Load NDEF message from the flash file. */
-	if (ndef_file_load(ndef_msg_buf, sizeof(ndef_msg_buf)) < 0) {
-		printk("Cannot load NDEF file!\n");
-		goto fail;
-	}
 
-	/* Restore default NDEF message if button is pressed. */
-	uint32_t button_state;
-
-	dk_read_buttons(&button_state, NULL);
-	if (button_state & NDEF_RESTORE_BTN_MSK) {
-		if (ndef_restore_default(ndef_msg_buf,
-					 sizeof(ndef_msg_buf)) < 0) {
-			printk("Cannot flash NDEF message!\n");
-			goto fail;
-		}
-		printk("Default NDEF message restored!\n");
-	}
 	/* Set up NFC */
 	int err = nfc_t4t_setup(nfc_callback, NULL);
 
@@ -153,12 +151,7 @@ int main(void)
 		printk("Cannot setup t4t library!\n");
 		goto fail;
 	}
-	/* Run Read-Write mode for Type 4 Tag platform */
-	if (nfc_t4t_ndef_rwpayload_set(ndef_msg_buf,
-				       sizeof(ndef_msg_buf)) < 0) {
-		printk("Cannot set payload!\n");
-		goto fail;
-	}
+
 	/* Start sensing NFC field */
 	if (nfc_t4t_emulation_start() < 0) {
 		printk("Cannot start emulation!\n");
@@ -177,6 +170,17 @@ int main(void)
 
 			atomic_set(&op_flags, FLASH_WRITE_FINISHED);
 		}
+
+		if (tx_to_be_sent) {
+			tx_to_be_sent = false;
+			printk("Data sending\n");
+
+			err = nfc_t4t_response_pdu_send(test_data, sizeof(test_data));
+			if (err) {
+				printk("Data ind err: %d\n", err);
+			}
+		}
+
 
 		__WFE();
 	}

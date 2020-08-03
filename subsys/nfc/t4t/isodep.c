@@ -718,17 +718,17 @@ int nfc_t4t_isodep_rats_send(enum nfc_t4t_isodep_fsd fsd, uint8_t did)
 		return -EINVAL;
 	}
 
-	if (t4t_isodep.tx_data.buf_size < fsd_value_map[fsd]) {
-		LOG_ERR("Invalid FSD value. Increase Tx buffer size or decrease FSD");
+	// if (t4t_isodep.tx_data.buf_size < fsd_value_map[fsd]) {
+	// 	LOG_ERR("Invalid FSD value. Increase Tx buffer size or decrease FSD");
 
-		return -ENOMEM;
-	}
+	// 	return -ENOMEM;
+	// }
 
 	/* Set DID field. */
 	param = did & T4T_RATS_DID_MASK;
 
 	/* Set FSDI field. */
-	param |= (fsd << T4T_RATS_FSDI) & T4T_RATS_FSDI_MASK;
+	param |= (fsd << 4) & T4T_RATS_FSDI_MASK;
 
 	t4t_isodep.tx_data.data[0] = T4T_RATS_CMD;
 	t4t_isodep.tx_data.data[1] = param;

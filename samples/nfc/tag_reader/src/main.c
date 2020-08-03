@@ -388,7 +388,7 @@ static void anticollision_completed(const struct st25r3911b_nfca_tag_info *tag_i
 		tag_type = NFC_TAG_TYPE_T4T;
 
 		/* Send RATS command */
-		err = nfc_t4t_isodep_rats_send(NFC_T4T_ISODEP_FSD_256, 0);
+		err = nfc_t4t_isodep_rats_send(9, 0);
 		if (err) {
 			printk("Type 4 Tag RATS sending error %d.\n", err);
 		}
@@ -409,6 +409,7 @@ static void transfer_completed(const uint8_t *data, size_t len, int err)
 		printk("NFC Transfer error: %d.\n", err);
 		return;
 	}
+	printk("Before ISO-DEP RX data: %d\n", len);
 
 	switch (tag_type) {
 	case NFC_TAG_TYPE_T2T:
@@ -469,7 +470,7 @@ static void t4t_isodep_error(int err)
 {
 	printk("ISO-DEP Protocol error %d.\n", err);
 
-	nfc_tag_detect(false);
+	// nfc_tag_detect(false);
 }
 
 static void t4t_isodep_data_send(uint8_t *data, size_t data_len, uint32_t ftd)
@@ -488,6 +489,8 @@ static void t4t_isodep_data_send(uint8_t *data, size_t data_len, uint32_t ftd)
 static void t4t_isodep_received(const uint8_t *data, size_t data_len)
 {
 	int err;
+
+	printk("RX len: %d\n", data_len);
 
 	err = nfc_t4t_hl_procedure_on_data_received(data, data_len);
 	if (err) {
